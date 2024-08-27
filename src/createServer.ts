@@ -1,15 +1,15 @@
-import { lookup } from 'node:dns';
-import { Agent as HttpAgent } from 'node:http';
-import { Agent as HttpsAgent } from 'node:https';
-import { isValid, parse } from 'ipaddr.js';
-import { WebSocketServer } from 'ws';
-import BareServer from './BareServer.js';
-import type { BareMaintainer, Options } from './BareServer.js';
-import type { Database } from './Meta.js';
-import { cleanupDatabase, JSONDatabaseAdapter } from './Meta.js';
-import registerV1 from './V1.js';
-import registerV2 from './V2.js';
-import registerV3 from './V3.js';
+import { lookup } from "node:dns";
+import { Agent as HttpAgent } from "node:http";
+import { Agent as HttpsAgent } from "node:https";
+import { isValid, parse } from "ipaddr.js";
+import { WebSocketServer } from "ws";
+import BareServer from "./BareServer.js";
+import type { BareMaintainer, Options } from "./BareServer.js";
+import type { Database } from "./Meta.js";
+import { cleanupDatabase, JSONDatabaseAdapter } from "./Meta.js";
+import registerV1 from "./V1.js";
+import registerV2 from "./V2.js";
+import registerV3 from "./V3.js";
 
 export const validIPFamily: number[] = [0, 4, 6];
 
@@ -21,11 +21,11 @@ export interface BareServerInit {
 	/**
 	 * When set, the default logic for blocking local IP addresses is disabled.
 	 */
-	filterRemote?: Options['filterRemote'];
+	filterRemote?: Options["filterRemote"];
 	/**
 	 * When set, the default logic for blocking local IP addresses is disabled.
 	 */
-	lookup?: Options['lookup'];
+	lookup?: Options["lookup"];
 	/**
 	 * If local IP addresses/DNS records should be blocked.
 	 * @default true
@@ -55,7 +55,7 @@ export interface Address {
  * Converts the address and family of a DNS lookup callback into an array if it wasn't already
  */
 export function toAddressArray(address: string | Address[], family?: number) {
-	if (typeof address === 'string')
+	if (typeof address === "string")
 		return [
 			{
 				address,
@@ -70,23 +70,23 @@ export function toAddressArray(address: string | Address[], family?: number) {
  * This will handle all lifecycles for unspecified options (httpAgent, httpsAgent, metaMap).
  */
 export function createBareServer(directory: string, init: BareServerInit = {}) {
-	if (typeof directory !== 'string')
-		throw new Error('Directory must be specified.');
-	if (!directory.startsWith('/') || !directory.endsWith('/'))
-		throw new RangeError('Directory must start and end with /');
+	if (typeof directory !== "string")
+		throw new Error("Directory must be specified.");
+	if (!directory.startsWith("/") || !directory.endsWith("/"))
+		throw new RangeError("Directory must start and end with /");
 	init.logErrors ??= false;
 
 	const cleanup: (() => void)[] = [];
 
-	if (typeof init.family === 'number' && !validIPFamily.includes(init.family))
-		throw new RangeError('init.family must be one of: 0, 4, 6');
+	if (typeof init.family === "number" && !validIPFamily.includes(init.family))
+		throw new RangeError("init.family must be one of: 0, 4, 6");
 
 	if (init.blockLocal ?? true) {
 		init.filterRemote ??= (url) => {
 			// if the remote is an IP then it didn't go through the init.lookup hook
 			// isValid determines if this is so
-			if (isValid(url.hostname) && parse(url.hostname).range() !== 'unicast')
-				throw new RangeError('Forbidden IP');
+			if (isValid(url.hostname) && parse(url.hostname).range() !== "unicast")
+				throw new RangeError("Forbidden IP");
 		};
 
 		init.lookup ??= (hostname, options, callback) =>
@@ -94,10 +94,10 @@ export function createBareServer(directory: string, init: BareServerInit = {}) {
 				if (
 					address &&
 					toAddressArray(address, family).some(
-						({ address }) => parse(address).range() !== 'unicast',
+						({ address }) => parse(address).range() !== "unicast",
 					)
 				)
-					callback(new RangeError('Forbidden IP'), '', -1);
+					callback(new RangeError("Forbidden IP"), "", -1);
 				else callback(err, address, family);
 			});
 	}
@@ -113,6 +113,7 @@ export function createBareServer(directory: string, init: BareServerInit = {}) {
 	if (!init.httpsAgent) {
 		const httpsAgent = new HttpsAgent({
 			keepAlive: true,
+			rejectUnauthorized: false,
 		});
 		init.httpsAgent = httpsAgent;
 		cleanup.push(() => httpsAgent.destroy());
@@ -140,7 +141,7 @@ export function createBareServer(directory: string, init: BareServerInit = {}) {
 
 	registerV3(server);
 
-	server.once('close', () => {
+	server.once("close", () => {
 		for (const cb of cleanup) cb();
 	});
 
