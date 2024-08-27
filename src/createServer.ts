@@ -62,7 +62,7 @@ export function toAddressArray(address: string | Address[], family?: number) {
 				family,
 			},
 		] as Address[];
-	else return address;
+	return address;
 }
 
 /**

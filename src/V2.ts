@@ -1,78 +1,78 @@
-import { Readable } from 'node:stream';
+import { Readable } from "node:stream";
 import type {
 	BareRequest,
 	RouteCallback,
 	SocketRouteCallback,
-} from './BareServer.js';
-import { BareError } from './BareServer.js';
-import type Server from './BareServer.js';
+} from "./BareServer.js";
+import { BareError } from "./BareServer.js";
+import type Server from "./BareServer.js";
 import {
 	flattenHeader,
 	mapHeadersFromArray,
 	rawHeaderNames,
-} from './headerUtil.js';
-import type { BareRemote } from './remoteUtil.js';
-import { remoteToURL } from './remoteUtil.js';
-import type { BareHeaders } from './requestUtil.js';
+} from "./headerUtil.js";
+import type { BareRemote } from "./remoteUtil.js";
+import { remoteToURL } from "./remoteUtil.js";
+import type { BareHeaders } from "./requestUtil.js";
 import {
 	bareFetch,
 	bareUpgradeFetch,
 	nullBodyStatus,
 	randomHex,
-} from './requestUtil.js';
-import { joinHeaders, splitHeaders } from './splitHeaderUtil.js';
+} from "./requestUtil.js";
+import { joinHeaders, splitHeaders } from "./splitHeaderUtil.js";
 
-const validProtocols: string[] = ['http:', 'https:', 'ws:', 'wss:'];
+const validProtocols: string[] = ["http:", "https:", "ws:", "wss:"];
 
 const forbiddenSendHeaders = [
-	'connection',
-	'content-length',
-	'transfer-encoding',
+	"connection",
+	"content-length",
+	"transfer-encoding",
 ];
 
 const forbiddenForwardHeaders: string[] = [
-	'connection',
-	'transfer-encoding',
-	'host',
-	'origin',
-	'referer',
+	"connection",
+	"transfer-encoding",
+	"host",
+	"origin",
+	"referer",
 ];
 
 const forbiddenPassHeaders: string[] = [
-	'vary',
-	'connection',
-	'transfer-encoding',
-	'access-control-allow-headers',
-	'access-control-allow-methods',
-	'access-control-expose-headers',
-	'access-control-max-age',
-	'access-control-request-headers',
-	'access-control-request-method',
+	"vary",
+	"connection",
+	"transfer-encoding",
+	"access-control-allow-headers",
+	"access-control-allow-methods",
+	"access-control-expose-headers",
+	"access-control-max-age",
+	"access-control-request-headers",
+	"access-control-request-method",
 ];
 
 // common defaults
 const defaultForwardHeaders: string[] = [
-	'accept-encoding',
-	'accept-language',
-	'sec-websocket-extensions',
-	'sec-websocket-key',
-	'sec-websocket-version',
+	"accept-encoding",
+	"accept-language",
+	"sec-websocket-extensions",
+	"sec-websocket-key",
+	"sec-websocket-version",
 ];
 
 const defaultPassHeaders: string[] = [
-	'content-encoding',
-	'content-length',
-	'last-modified',
+	"content-encoding",
+	"content-length",
+	"last-modified",
 ];
 
 // defaults if the client provides a cache key
 const defaultCacheForwardHeaders: string[] = [
-	'if-modified-since',
-	'if-none-match',
-	'cache-control',
+	"if-modified-since",
+	"if-none-match",
+	"cache-control",
 ];
 
-const defaultCachePassHeaders: string[] = ['cache-control', 'etag'];
+const defaultCachePassHeaders: string[] = ["cache-control", "etag"];
 
 const cacheNotModified = 304;
 
@@ -107,7 +107,7 @@ function readHeaders(request: BareRequest): BareHeaderData {
 	const forwardHeaders = [...defaultForwardHeaders];
 
 	// should be unique
-	const cache = new URL(request.url).searchParams.has('cache');
+	const cache = new URL(request.url).searchParams.has("cache");
 
 	if (cache) {
 		passHeaders.push(...defaultCachePassHeaders);
@@ -117,33 +117,33 @@ function readHeaders(request: BareRequest): BareHeaderData {
 
 	const headers = joinHeaders(request.headers);
 
-	for (const remoteProp of ['host', 'port', 'protocol', 'path']) {
+	for (const remoteProp of ["host", "port", "protocol", "path"]) {
 		const header = `x-bare-${remoteProp}`;
 		const value = headers.get(header);
 
 		if (value === null)
 			throw new BareError(400, {
-				code: 'MISSING_BARE_HEADER',
+				code: "MISSING_BARE_HEADER",
 				id: `request.headers.${header}`,
-				message: `Header was not specified.`,
+				message: "Header was not specified.",
 			});
 
 		switch (remoteProp) {
-			case 'port':
-				if (isNaN(parseInt(value))) {
+			case "port":
+				if (Number.isNaN(Number.parseInt(value))) {
 					throw new BareError(400, {
-						code: 'INVALID_BARE_HEADER',
+						code: "INVALID_BARE_HEADER",
 						id: `request.headers.${header}`,
-						message: `Header was not a valid integer.`,
+						message: "Header was not a valid integer.",
 					});
 				}
 				break;
-			case 'protocol':
+			case "protocol":
 				if (!validProtocols.includes(value)) {
 					throw new BareError(400, {
-						code: 'INVALID_BARE_HEADER',
+						code: "INVALID_BARE_HEADER",
 						id: `request.headers.${header}`,
-						message: `Header was invalid`,
+						message: "Header was invalid",
 					});
 				}
 				break;
@@ -152,13 +152,13 @@ function readHeaders(request: BareRequest): BareHeaderData {
 		remote[remoteProp] = value;
 	}
 
-	const xBareHeaders = headers.get('x-bare-headers');
+	const xBareHeaders = headers.get("x-bare-headers");
 
 	if (xBareHeaders === null)
 		throw new BareError(400, {
-			code: 'MISSING_BARE_HEADER',
-			id: `request.headers.x-bare-headers`,
-			message: `Header was not specified.`,
+			code: "MISSING_BARE_HEADER",
+			id: "request.headers.x-bare-headers",
+			message: "Header was not specified.",
 		});
 
 	try {
@@ -169,17 +169,17 @@ function readHeaders(request: BareRequest): BareHeaderData {
 
 			const value = json[header];
 
-			if (typeof value === 'string') {
+			if (typeof value === "string") {
 				sendHeaders[header] = value;
 			} else if (Array.isArray(value)) {
 				const array: string[] = [];
 
 				for (const val of value) {
-					if (typeof val !== 'string') {
+					if (typeof val !== "string") {
 						throw new BareError(400, {
-							code: 'INVALID_BARE_HEADER',
+							code: "INVALID_BARE_HEADER",
 							id: `bare.headers.${header}`,
-							message: `Header was not a String.`,
+							message: "Header was not a String.",
 						});
 					}
 
@@ -189,62 +189,59 @@ function readHeaders(request: BareRequest): BareHeaderData {
 				sendHeaders[header] = array;
 			} else
 				throw new BareError(400, {
-					code: 'INVALID_BARE_HEADER',
+					code: "INVALID_BARE_HEADER",
 					id: `bare.headers.${header}`,
-					message: `Header was not a String.`,
+					message: "Header was not a String.",
 				});
 		}
 	} catch (error) {
 		if (error instanceof SyntaxError) {
 			throw new BareError(400, {
-				code: 'INVALID_BARE_HEADER',
-				id: `request.headers.x-bare-headers`,
+				code: "INVALID_BARE_HEADER",
+				id: "request.headers.x-bare-headers",
 				message: `Header contained invalid JSON. (${error.message})`,
 			});
-		} else {
-			throw error;
 		}
+		throw error;
 	}
 
-	if (headers.has('x-bare-pass-status')) {
-		const parsed = headers.get('x-bare-pass-status')!.split(splitHeaderValue);
+	if (headers.has("x-bare-pass-status")) {
+		const parsed = headers.get("x-bare-pass-status")!.split(splitHeaderValue);
 
 		for (const value of parsed) {
-			const number = parseInt(value);
+			const number = Number.parseInt(value);
 
-			if (isNaN(number)) {
+			if (Number.isNaN(number)) {
 				throw new BareError(400, {
-					code: 'INVALID_BARE_HEADER',
-					id: `request.headers.x-bare-pass-status`,
-					message: `Array contained non-number value.`,
+					code: "INVALID_BARE_HEADER",
+					id: "request.headers.x-bare-pass-status",
+					message: "Array contained non-number value.",
 				});
-			} else {
-				passStatus.push(number);
 			}
+			passStatus.push(number);
 		}
 	}
 
-	if (headers.has('x-bare-pass-headers')) {
-		const parsed = headers.get('x-bare-pass-headers')!.split(splitHeaderValue);
+	if (headers.has("x-bare-pass-headers")) {
+		const parsed = headers.get("x-bare-pass-headers")!.split(splitHeaderValue);
 
 		for (let header of parsed) {
 			header = header.toLowerCase();
 
 			if (forbiddenPassHeaders.includes(header)) {
 				throw new BareError(400, {
-					code: 'FORBIDDEN_BARE_HEADER',
-					id: `request.headers.x-bare-forward-headers`,
-					message: `A forbidden header was passed.`,
+					code: "FORBIDDEN_BARE_HEADER",
+					id: "request.headers.x-bare-forward-headers",
+					message: "A forbidden header was passed.",
 				});
-			} else {
-				passHeaders.push(header);
 			}
+			passHeaders.push(header);
 		}
 	}
 
-	if (headers.has('x-bare-forward-headers')) {
+	if (headers.has("x-bare-forward-headers")) {
 		const parsed = headers
-			.get('x-bare-forward-headers')!
+			.get("x-bare-forward-headers")!
 			.split(splitHeaderValue);
 
 		for (let header of parsed) {
@@ -252,13 +249,12 @@ function readHeaders(request: BareRequest): BareHeaderData {
 
 			if (forbiddenForwardHeaders.includes(header)) {
 				throw new BareError(400, {
-					code: 'FORBIDDEN_BARE_HEADER',
-					id: `request.headers.x-bare-forward-headers`,
-					message: `A forbidden header was forwarded.`,
+					code: "FORBIDDEN_BARE_HEADER",
+					id: "request.headers.x-bare-forward-headers",
+					message: "A forbidden header was forwarded.",
 				});
-			} else {
-				forwardHeaders.push(header);
 			}
+			forwardHeaders.push(header);
 		}
 	}
 
@@ -274,11 +270,11 @@ function readHeaders(request: BareRequest): BareHeaderData {
 const tunnelRequest: RouteCallback = async (request, res, options) => {
 	const abort = new AbortController();
 
-	request.native.on('close', () => {
+	request.native.on("close", () => {
 		if (!request.native.complete) abort.abort();
 	});
 
-	res.on('close', () => {
+	res.on("close", () => {
 		abort.abort();
 	});
 
@@ -307,10 +303,10 @@ const tunnelRequest: RouteCallback = async (request, res, options) => {
 		: 200;
 
 	if (status !== cacheNotModified) {
-		responseHeaders.set('x-bare-status', response.statusCode!.toString());
-		responseHeaders.set('x-bare-status-text', response.statusMessage!);
+		responseHeaders.set("x-bare-status", response.statusCode!.toString());
+		responseHeaders.set("x-bare-status-text", response.statusMessage!);
 		responseHeaders.set(
-			'x-bare-headers',
+			"x-bare-headers",
 			JSON.stringify(
 				mapHeadersFromArray(rawHeaderNames(response.rawHeaders), {
 					...(<BareHeaders>response.headers),
@@ -331,43 +327,43 @@ const tunnelRequest: RouteCallback = async (request, res, options) => {
 const metaExpiration = 30e3;
 
 const getMeta: RouteCallback = async (request, res, options) => {
-	if (request.method === 'OPTIONS') {
+	if (request.method === "OPTIONS") {
 		return new Response(undefined, { status: 200 });
 	}
 
-	const id = request.headers.get('x-bare-id');
+	const id = request.headers.get("x-bare-id");
 
 	if (id === null)
 		throw new BareError(400, {
-			code: 'MISSING_BARE_HEADER',
-			id: 'request.headers.x-bare-id',
-			message: 'Header was not specified',
+			code: "MISSING_BARE_HEADER",
+			id: "request.headers.x-bare-id",
+			message: "Header was not specified",
 		});
 
 	const meta = await options.database.get(id);
 
 	if (meta?.value.v !== 2)
 		throw new BareError(400, {
-			code: 'INVALID_BARE_HEADER',
-			id: 'request.headers.x-bare-id',
-			message: 'Unregistered ID',
+			code: "INVALID_BARE_HEADER",
+			id: "request.headers.x-bare-id",
+			message: "Unregistered ID",
 		});
 
 	if (!meta.value.response)
 		throw new BareError(400, {
-			code: 'INVALID_BARE_HEADER',
-			id: 'request.headers.x-bare-id',
-			message: 'Meta not ready',
+			code: "INVALID_BARE_HEADER",
+			id: "request.headers.x-bare-id",
+			message: "Meta not ready",
 		});
 
 	await options.database.delete(id);
 
 	const responseHeaders = new Headers();
 
-	responseHeaders.set('x-bare-status', meta.value.response.status.toString());
-	responseHeaders.set('x-bare-status-text', meta.value.response.statusText);
+	responseHeaders.set("x-bare-status", meta.value.response.status.toString());
+	responseHeaders.set("x-bare-status-text", meta.value.response.statusText);
 	responseHeaders.set(
-		'x-bare-headers',
+		"x-bare-headers",
 		JSON.stringify(meta.value.response.headers),
 	);
 
@@ -403,20 +399,20 @@ const tunnelSocket: SocketRouteCallback = async (
 ) => {
 	const abort = new AbortController();
 
-	request.native.on('close', () => {
+	request.native.on("close", () => {
 		if (!request.native.complete) abort.abort();
 	});
 
-	socket.on('close', () => {
+	socket.on("close", () => {
 		abort.abort();
 	});
 
-	if (!request.headers.has('sec-websocket-protocol')) {
+	if (!request.headers.has("sec-websocket-protocol")) {
 		socket.end();
 		return;
 	}
 
-	const id = request.headers.get('sec-websocket-protocol')!;
+	const id = request.headers.get("sec-websocket-protocol")!;
 	const meta = await options.database.get(id);
 
 	if (meta?.value.v !== 2) {
@@ -438,25 +434,25 @@ const tunnelSocket: SocketRouteCallback = async (
 		options,
 	);
 
-	remoteSocket.on('close', () => {
+	remoteSocket.on("close", () => {
 		socket.end();
 	});
 
-	socket.on('close', () => {
+	socket.on("close", () => {
 		remoteSocket.end();
 	});
 
-	remoteSocket.on('error', (error) => {
+	remoteSocket.on("error", (error) => {
 		if (options.logErrors) {
-			console.error('Remote socket error:', error);
+			console.error("Remote socket error:", error);
 		}
 
 		socket.end();
 	});
 
-	socket.on('error', (error) => {
+	socket.on("error", (error) => {
 		if (options.logErrors) {
-			console.error('Serving socket error:', error);
+			console.error("Serving socket error:", error);
 		}
 
 		remoteSocket.end();
@@ -475,36 +471,36 @@ const tunnelSocket: SocketRouteCallback = async (
 	await options.database.set(id, meta);
 
 	const responseHeaders = [
-		`HTTP/1.1 101 Switching Protocols`,
-		`Upgrade: websocket`,
-		`Connection: Upgrade`,
+		"HTTP/1.1 101 Switching Protocols",
+		"Upgrade: websocket",
+		"Connection: Upgrade",
 		`Sec-WebSocket-Protocol: ${id}`,
 	];
 
-	if (remoteHeaders.has('sec-websocket-extensions')) {
+	if (remoteHeaders.has("sec-websocket-extensions")) {
 		responseHeaders.push(
 			`Sec-WebSocket-Extensions: ${remoteHeaders.get(
-				'sec-websocket-extensions',
+				"sec-websocket-extensions",
 			)}`,
 		);
 	}
 
-	if (remoteHeaders.has('sec-websocket-accept')) {
+	if (remoteHeaders.has("sec-websocket-accept")) {
 		responseHeaders.push(
-			`Sec-WebSocket-Accept: ${remoteHeaders.get('sec-websocket-accept')}`,
+			`Sec-WebSocket-Accept: ${remoteHeaders.get("sec-websocket-accept")}`,
 		);
 	}
 
-	socket.write(responseHeaders.concat('', '').join('\r\n'));
+	socket.write(responseHeaders.concat("", "").join("\r\n"));
 
 	remoteSocket.pipe(socket);
 	socket.pipe(remoteSocket);
 };
 
 export default function registerV2(server: Server) {
-	server.routes.set('/v2/', tunnelRequest);
-	server.routes.set('/v2/ws-new-meta', newMeta);
-	server.routes.set('/v2/ws-meta', getMeta);
-	server.socketRoutes.set('/v2/', tunnelSocket);
-	server.versions.push('v2');
+	server.routes.set("/v2/", tunnelRequest);
+	server.routes.set("/v2/ws-new-meta", newMeta);
+	server.routes.set("/v2/ws-meta", getMeta);
+	server.socketRoutes.set("/v2/", tunnelSocket);
+	server.versions.push("v2");
 }

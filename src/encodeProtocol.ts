@@ -38,7 +38,7 @@ export function decodeProtocol(protocol: string): string {
 		const char = protocol[i];
 
 		if (char === reserveChar) {
-			const code = parseInt(protocol.slice(i + 1, i + 3), 16);
+			const code = Number.parseInt(protocol.slice(i + 1, i + 3), 16);
 			const decoded = String.fromCharCode(code);
 
 			result += decoded;
