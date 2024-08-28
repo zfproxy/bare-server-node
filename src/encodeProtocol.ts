@@ -1,52 +1,52 @@
 const validChars =
-	"!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~";
-const reserveChar = '%';
+  "!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~";
+const reserveChar = "%";
 
 export function validProtocol(protocol: string): boolean {
-	for (let i = 0; i < protocol.length; i++) {
-		const char = protocol[i];
+  for (let i = 0; i < protocol.length; i++) {
+    const char = protocol[i];
 
-		if (!validChars.includes(char)) {
-			return false;
-		}
-	}
+    if (!validChars.includes(char)) {
+      return false;
+    }
+  }
 
-	return true;
+  return true;
 }
 
 export function encodeProtocol(protocol: string): string {
-	let result = '';
+  let result = "";
 
-	for (let i = 0; i < protocol.length; i++) {
-		const char = protocol[i];
+  for (let i = 0; i < protocol.length; i++) {
+    const char = protocol[i];
 
-		if (validChars.includes(char) && char !== reserveChar) {
-			result += char;
-		} else {
-			const code = char.charCodeAt(0);
-			result += reserveChar + code.toString(16).padStart(2, '0');
-		}
-	}
+    if (validChars.includes(char) && char !== reserveChar) {
+      result += char;
+    } else {
+      const code = char.charCodeAt(0);
+      result += reserveChar + code.toString(16).padStart(2, "0");
+    }
+  }
 
-	return result;
+  return result;
 }
 
 export function decodeProtocol(protocol: string): string {
-	let result = '';
+  let result = "";
 
-	for (let i = 0; i < protocol.length; i++) {
-		const char = protocol[i];
+  for (let i = 0; i < protocol.length; i++) {
+    const char = protocol[i];
 
-		if (char === reserveChar) {
-			const code = Number.parseInt(protocol.slice(i + 1, i + 3), 16);
-			const decoded = String.fromCharCode(code);
+    if (char === reserveChar) {
+      const code = Number.parseInt(protocol.slice(i + 1, i + 3), 16);
+      const decoded = String.fromCharCode(code);
 
-			result += decoded;
-			i += 2;
-		} else {
-			result += char;
-		}
-	}
+      result += decoded;
+      i += 2;
+    } else {
+      result += char;
+    }
+  }
 
-	return result;
+  return result;
 }
