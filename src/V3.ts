@@ -38,7 +38,7 @@ const forbiddenPassHeaders: string[] = [
 ];
 
 // common defaults
-const defaultForwardHeaders: string[] = ["accept-encoding", "accept-language"];
+const defaultForwardHeaders: string[] = ["accept-language"]; // "accept-encoding", 禁用压缩
 
 const defaultPassHeaders: string[] = [
   "content-encoding",
@@ -67,6 +67,7 @@ function loadForwardedHeaders(
       target[header] = request.headers.get(header)!;
     }
   }
+  target["accept-encoding"] = "identity"; // 禁用压缩
 }
 
 const splitHeaderValue = /,\s*/g;

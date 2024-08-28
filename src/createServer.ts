@@ -22,6 +22,9 @@ export interface BareServerInit {
    * When set, the default logic for blocking local IP addresses is disabled.
    */
   filterRemote?: Options["filterRemote"];
+
+  filterBody?: Options["filterBody"];
+  checkBody?: Options["checkBody"];
   /**
    * When set, the default logic for blocking local IP addresses is disabled.
    */
