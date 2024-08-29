@@ -362,18 +362,13 @@ export default class Server extends EventEmitter {
     const isHtml = contentType.startsWith("text/html");
     let bodyString = "";
     let hasSensitive = false;
-    if (response.body && isHtml) {
-      // console.info("x-bare-headers", response.headers.get("x-bare-headers"));
+    if (response.body && isHtml && this.options.checkBody) {
       try {
         // 读取 response.body 到字符串
         bodyString = await this.readResponseBody(response);
 
-        if (this.options.checkBody) {
-          // response.body;
-          if (this.options.checkBody(bodyString)) {
-            // response = new Response(undefined, { status: 404 });
-            hasSensitive = true;
-          }
+        if (this.options.checkBody(bodyString)) {
+          hasSensitive = true;
         }
       } catch (error) {
         console.error("Error processing response:", error);
@@ -413,7 +408,7 @@ export default class Server extends EventEmitter {
     );
 
     if (response.body) {
-      if (isHtml) {
+      if (isHtml && this.options.checkBody) {
         try {
           // 将字符串写入到 res
           this.writeStringToResponse(bodyString, res);
