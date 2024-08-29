@@ -2,12 +2,12 @@
 
 // these global definitions are only needed to make Typescript work: https://github.com/DefinitelyTyped/DefinitelyTyped/issues/60924
 // the `fetch` is already available as part of the Node.js Runtime >= 18.x which we use
-import {
-  type FormData as FormDataType,
-  type HeadersInit as HeadersInitType,
-  type Headers as HeadersType,
-  type Request as RequestType,
-  type Response as ResponseType,
+import type {
+  FormData as FormDataType,
+  HeadersInit as HeadersInitType,
+  Headers as HeadersType,
+  Request as RequestType,
+  Response as ResponseType,
 } from "undici";
 
 declare global {

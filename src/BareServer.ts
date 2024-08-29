@@ -8,7 +8,7 @@ import {
   pipeline,
   Readable,
   Transform,
-  Writable,
+  type Writable,
   type Duplex,
   type TransformCallback,
 } from "node:stream";

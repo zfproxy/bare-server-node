@@ -54,6 +54,11 @@ function outgoingError<T>(error: T): T | BareError {
   return error;
 }
 
+import EventEmitter from "node:events";
+
+// 设置新的监听器上限，比如设置为 20 个
+EventEmitter.defaultMaxListeners = 20;
+
 export async function bareFetch(
   request: BareRequest,
   signal: AbortSignal,
@@ -89,6 +94,28 @@ export async function bareFetch(
       agent: options.httpAgent,
     });
   else throw new RangeError(`Unsupported protocol: '${remote.protocol}'`);
+
+  let clientIp = request.native.socket.remoteAddress || "";
+  clientIp = clientIp.replace("::ffff:", "");
+  const sourceAddr = `${clientIp}:${request.native.socket.remotePort}`;
+
+  // 监听 'socket' 事件来获取本地端口
+  outgoing.on("socket", socket => {
+    const connectListener = () => {
+      console.log(`addr pair: ${sourceAddr}-${socket.localPort}`);
+
+      // if (request.body) Readable.fromWeb(request.body).pipe(outgoing);
+      // else outgoing.end();
+    };
+
+    socket.on("connect", connectListener);
+
+    // 在适当的时候移除监听器（例如请求结束时）
+    outgoing.on("close", () => {
+      console.log(`off Local port: ${socket.localPort}`);
+      socket.off("connect", connectListener);
+    });
+  });
 
   if (request.body) Readable.fromWeb(request.body).pipe(outgoing);
   else outgoing.end();
