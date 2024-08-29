@@ -379,10 +379,30 @@ export default class Server extends EventEmitter {
     }
 
     if (hasSensitive) {
-      res.writeHead(404, "access denied", Object.fromEntries(response.headers));
+      const send = Buffer.from(
+        JSON.stringify(
+          {
+            code: "UNKNOWN",
+            id: "error.Exception",
+            message: "⚠️⚠️⚠️⚠️⚠️⚠️Access Denied⚠️⚠️⚠️⚠️⚠️⚠️",
+            stack: new Error(<string | undefined>"access denied").stack,
+          },
+          null,
+          "\t",
+        ),
+      );
+      const headers = {
+        "content-type": "application/json",
+        "content-length": send.byteLength.toString(),
+      };
+      res.writeHead(404, "access denied", headers);
+
+      res.write(send, "utf8", () => {
+        res.end();
+      });
       return;
     }
-    
+
     res.writeHead(
       response.status,
       response.statusText,
