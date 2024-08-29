@@ -357,9 +357,12 @@ export default class Server extends EventEmitter {
     // instead, fetch preflight every 10 minutes
     response.headers.set("access-control-max-age", "7200");
 
+    const contentType = response.headers.get("content-type") || "";
+    // 判断Content-Type是否为document类型（通常是HTML）
+    const isHtml = contentType.startsWith("text/html");
     let bodyString = "";
     let hasSensitive = false;
-    if (response.body) {
+    if (response.body && isHtml) {
       // console.info("x-bare-headers", response.headers.get("x-bare-headers"));
       try {
         // 读取 response.body 到字符串
@@ -410,36 +413,33 @@ export default class Server extends EventEmitter {
     );
 
     if (response.body) {
-      // console.info("x-bare-headers", response.headers.get("x-bare-headers"));
-      try {
-        // 将字符串写入到 res
-        this.writeStringToResponse(bodyString, res);
-      } catch (error) {
-        console.error("Error processing response:", error);
-        res.destroy(); // 销毁 res 流以处理错误
+      if (isHtml) {
+        try {
+          // 将字符串写入到 res
+          this.writeStringToResponse(bodyString, res);
+        } catch (error) {
+          console.error("Error processing response:", error);
+          res.destroy(); // 销毁 res 流以处理错误
+        }
+      } else {
+        const body = Readable.fromWeb(response.body as ReadableStream);
+        body.pipe(res);
+        // // 创建敏感词检查器，并传入检查回调函数
+        // const checker = new SensitiveWordChecker(this.options.filterBody!);
+        // // 将响应体流数据先通过检查器，然后再传递给 `res` 流
+        // body.pipe(checker).pipe(res);
+        // // 使用 pipeline 连接流，并添加错误处理
+        // pipeline(body, checker, res, err => {
+        //   if (err) {
+        //     console.error("Pipeline failed:", err);
+        //   } else {
+        //     console.log("Pipeline succeeded.");
+        //   }
+        // });
+        // // 创建 PassThrough 流，用于记录日志或其他处理
+        // // const passThrough = new PassThrough();
+        res.on("close", () => body.destroy());
       }
-
-      // const body = Readable.fromWeb(response.body as ReadableStream);
-      // // body.pipe(res);
-
-      // // 创建敏感词检查器，并传入检查回调函数
-      // const checker = new SensitiveWordChecker(this.options.filterBody!);
-
-      // // 将响应体流数据先通过检查器，然后再传递给 `res` 流
-      // body.pipe(checker).pipe(res);
-
-      // // 使用 pipeline 连接流，并添加错误处理
-      // pipeline(body, checker, res, err => {
-      //   if (err) {
-      //     console.error("Pipeline failed:", err);
-      //   } else {
-      //     console.log("Pipeline succeeded.");
-      //   }
-      // });
-
-      // // 创建 PassThrough 流，用于记录日志或其他处理
-      // // const passThrough = new PassThrough();
-      // res.on("close", () => body.destroy());
     } else res.end();
   }
 }

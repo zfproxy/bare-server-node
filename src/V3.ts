@@ -260,6 +260,7 @@ const tunnelRequest: RouteCallback = async (request, res, options) => {
   if (status !== cacheNotModified) {
     responseHeaders.set("x-bare-status", response.statusCode!.toString());
     responseHeaders.set("x-bare-status-text", response.statusMessage!);
+    responseHeaders.set("content-type", response.headers["content-type"] || "");
     responseHeaders.set(
       "x-bare-headers",
       JSON.stringify(
